@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SESSION_SECRET: ci-only-test-secret-minimum-32-bytes-long-0123456789
+  TOTP_ISSUER: StationeryDepotCI
+
+jobs:
+  verify:
+    name: install / typecheck / lint / test / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # NOTE: plain `npm install` (not `npm ci`) so the runner self-heals
+      # package-lock.json if it drifts from package.json (e.g. the
+      # @types/node ^20 -> ^22 bump). Run `npm install` locally once and
+      # commit the lock to make installs fully deterministic again.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # No DATABASE_URL / MONGO_URL / REDIS_URL here on purpose: the repos
+      # fall back to the in-memory mocks, which is what the unit suite targets.
+      - name: Unit tests
+        run: npm test
+
+      - name: Secret scan (committed files)
+        run: |
+          set -euo pipefail
+          if grep -rEn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github 'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|AKIA[0-9A-Z]{16}' .; then
+            echo 'High-confidence secret pattern found in committed files' >&2
+            exit 1
+          fi
+          if grep -rEn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github --exclude='*.md' --exclude='.env.example' 'mongodb(\+srv)?://[^/]*:[^@]+@|mysql://[^:]+:[^@]+@|SESSION_SECRET=[^[:space:]]' --include='*.ts' --include='*.tsx' --include='*.mjs' --include='*.js' --include='*.json' --include='*.sql' --include='.env*' .; then
+            echo 'Connection string or hardcoded secret found in code' >&2
+            exit 1
+          fi
+          echo 'Secret scan clean'
+
+      - name: Exclusion grep (banned integrations)
+        run: |
+          set -euo pipefail
+          if grep -rEni --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github --exclude='package-lock.json' --exclude='bun.lock' 'payfast|ozow|yoco|stripe|courier|puppeteer|smtp' app lib hooks migrations tests middleware.ts; then
+            echo 'Banned integration reference found' >&2
+            exit 1
+          fi
+          echo 'Exclusion grep clean'
+
+      - name: Production build
+        run: npm run build
+
+  migrate:
+    name: validate SQL + Mongo migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-pw
+          MYSQL_DATABASE: stationery_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-pw"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # Runs migrations/mysql/*.sql + migrations/mongo/*.mjs against real
+      # databases. Catches schema errors (FK type mismatches, missing NOT
+      # NULL columns, bad seeds) before they reach staging/prod.
+      - name: Run migrations
+        run: npm run migrate
+        env:
+          DATABASE_URL: mysql://root:ci-root-pw@127.0.0.1:3306/stationery_test
+          MONGO_URL: mongodb://127.0.0.1:27017/stationery_test
+
+      # Re-running must be a no-op for MySQL (schema_migrations guard) and
+      # idempotent for Mongo ($setOnInsert upserts).
+      - name: Re-run migrations (idempotency check)
+        run: npm run migrate
+        env:
+          DATABASE_URL: mysql://root:ci-root-pw@127.0.0.1:3306/stationery_test
+          MONGO_URL: mongodb://127.0.0.1:27017/stationery_test

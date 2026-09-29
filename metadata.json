@@ -1,0 +1,5 @@
+{
+  "name": "Stationery Depot Core",
+  "description": "Security-critical B2B wholesale platform featuring high-throughput matrix ordering, CSV ingestion, and recurring requisition templates.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,16 @@
+{
+  "entity": "sales_orders",
+  "delimiter": ",",
+  "columns": [
+    { "header": "OrderNumber", "source": "order_number", "kind": "text", "required": true },
+    { "header": "CustomerCode", "source": "customer_id", "kind": "code6", "required": true },
+    { "header": "CompanyName", "source": "company_name", "kind": "text" },
+    { "header": "Status", "source": "status", "kind": "text", "required": true },
+    { "header": "Subtotal", "source": "subtotal", "kind": "amount", "required": true },
+    { "header": "VatAmount", "source": "vat", "kind": "amount", "required": true },
+    { "header": "TotalAmount", "source": "total", "kind": "amount", "required": true },
+    { "header": "InvoiceNumber", "source": "invoice_number", "kind": "text" },
+    { "header": "OrderDate", "source": "created_at", "kind": "date", "required": true },
+    { "header": "Reserved1", "source": null, "kind": "blank" }
+  ]
+}

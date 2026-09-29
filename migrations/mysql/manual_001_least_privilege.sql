@@ -1,0 +1,23 @@
+-- Manual root-only least-privilege grants. The migration runner skips manual_* files.
+-- Apply as MySQL root after creating the app user.
+-- Adjust 'app_user'@'10.10.0.10' and database name as needed.
+
+-- REVOKE ALL PRIVILEGES ON stationery.* FROM 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.customers TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.users TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.price_tiers TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON stationery.customer_tier_assignments TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON stationery.customer_product_prices TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON stationery.draft_orders TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.sales_orders TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.sales_order_lines TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, UPDATE ON stationery.invoice_sequences TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.invoices TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.credit_notes TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, UPDATE ON stationery.credit_note_sequences TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE ON stationery.stock_balances TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT ON stationery.stock_movements TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON stationery.requisition_templates TO 'app_user'@'10.10.0.10';
+-- GRANT INSERT, SELECT ON stationery.audit_log TO 'app_user'@'10.10.0.10';
+-- GRANT SELECT ON stationery.schema_migrations TO 'app_user'@'10.10.0.10';
+-- FLUSH PRIVILEGES;

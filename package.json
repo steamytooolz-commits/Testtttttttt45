@@ -1,0 +1,48 @@
+{
+  "name": "stationery-depot-core",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000 -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate": "node migrations/run.mjs",
+    "gen:secret": "node scripts/gen-secret.mjs",
+    "backup": "node scripts/backup-local.mjs",
+    "db:up": "docker compose -f docker-compose.local-db.yml up -d",
+    "db:down": "docker compose -f docker-compose.local-db.yml down"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@node-rs/argon2": "^2.0.0",
+    "clsx": "^2.1.1",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.42.0",
+    "mongodb": "^7.6.0",
+    "next": "^16.3.4",
+    "nodemailer": "^10.0.9",
+    "otpauth": "^9.5.2",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "xlsx": "^0.18.5",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "postcss": "^8.5.6",
+    "vitest": "^5.0.0"
+  }
+}

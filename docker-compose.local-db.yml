@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["./.local-db/redis:/data"]
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+      MARIADB_DATABASE: stationery
+    ports: ["3306:3306"]
+    volumes: ["./.local-db/mysql:/var/lib/mysql"]
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: ["./.local-db/mongo:/data/db"]

@@ -1,0 +1,19 @@
+{
+  "entity": "customers",
+  "delimiter": ",",
+  "columns": [
+    { "header": "AccountCode", "source": "account_code", "kind": "code6", "required": true },
+    { "header": "CompanyName", "source": "company_name", "kind": "text", "required": true },
+    { "header": "ContactName", "source": "contact_name", "kind": "text" },
+    { "header": "Email", "source": "email", "kind": "text" },
+    { "header": "Phone", "source": "phone", "kind": "text" },
+    { "header": "Street", "source": "street", "kind": "text" },
+    { "header": "City", "source": "city", "kind": "text" },
+    { "header": "Province", "source": "province", "kind": "text" },
+    { "header": "PostalCode", "source": "postal_code", "kind": "text" },
+    { "header": "Status", "source": "status", "kind": "text", "required": true },
+    { "header": "CreatedDate", "source": "created_at", "kind": "date", "required": true },
+    { "header": "Reserved1", "source": null, "kind": "blank" },
+    { "header": "Reserved2", "source": null, "kind": "blank" }
+  ]
+}

@@ -1125,31 +1125,31 @@ export function AdminView({
         <div className="fixed inset-0 z-50 bg-neutral-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <form
             onSubmit={handleAdjustStockSubmit}
-            className="bg-white dark:bg-white/[0.04] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-neutral-300"
+            className="bg-white dark:bg-[#101a2c] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-neutral-300 dark:border-white/10"
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
-              <h3 className="font-bold text-base text-neutral-900 dark:text-slate-200 flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-emerald-700" />
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-white/10 pb-3">
+              <h3 className="font-bold text-base text-neutral-900 dark:text-slate-100 flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
                 <span>Manual Stock Adjustment: <span className="font-mono">{adjustModalSku}</span></span>
               </h3>
               <button
                 type="button"
                 onClick={() => setAdjustModalSku(null)}
-                className="text-neutral-400 hover:text-neutral-700"
+                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {adjustError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium rounded-lg">
+              <div className="p-3 bg-rose-50 border border-rose-200 dark:bg-rose-950/60 dark:border-rose-500/40 text-rose-800 dark:text-rose-200 text-xs font-medium rounded-lg">
                 {adjustError}
               </div>
             )}
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
                   Quantity Delta (+ / -)
                 </label>
                 <input
@@ -1157,19 +1157,19 @@ export function AdminView({
                   step="1"
                   value={adjustDelta}
                   onChange={(e) => setAdjustDelta(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg font-mono focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 dark:bg-[#0d1526] dark:text-slate-100 rounded-lg font-mono focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
                   Adjustment Reason
                 </label>
                 <select
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value as 'ADJUSTMENT' | 'IMPORT' | 'REFUND')}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 dark:bg-[#0d1526] dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
                 >
                   <option value="ADJUSTMENT">Manual Stock Take / Count Adjustment</option>
                   <option value="IMPORT">Supplier Consignment Import</option>
@@ -1178,7 +1178,7 @@ export function AdminView({
               </div>
 
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
                   Reference Note / ID
                 </label>
                 <input
@@ -1186,7 +1186,7 @@ export function AdminView({
                   placeholder="e.g. AUDIT-2026-Q3 or PO-99812"
                   value={adjustRefId}
                   onChange={(e) => setAdjustRefId(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg font-mono focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 dark:bg-[#0d1526] dark:text-slate-100 rounded-lg font-mono focus:ring-2 focus:ring-brand-600/60 focus:border-brand-600"
                 />
               </div>
             </div>
@@ -1195,14 +1195,14 @@ export function AdminView({
               <button
                 type="button"
                 onClick={() => setAdjustModalSku(null)}
-                className="px-4 py-2 border border-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-50 dark:bg-white/[0.06] transition"
+                className="px-4 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs font-semibold hover:bg-neutral-50 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-slate-300 transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={adjustLoading}
-                className="px-5 py-2 bg-brand-950 hover:bg-brand-900 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 shadow-xs"
+                className="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 shadow-xs"
               >
                 {adjustLoading ? 'Saving...' : 'Confirm Stock Adjustment'}
               </button>
@@ -1212,20 +1212,30 @@ export function AdminView({
       )}
 
       {movementDrawerSku && (
-        <div className="fixed inset-0 z-50 bg-neutral-950/70 backdrop-blur-sm flex justify-end">
-          <div className="bg-white dark:bg-white/[0.04] w-full max-w-md h-full p-6 space-y-4 shadow-2xl border-l border-neutral-300 overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
-              <h3 className="font-bold text-base text-neutral-900 dark:text-slate-200 flex items-center gap-2">
-                <History className="w-5 h-5 text-emerald-700" />
-                <span>Stock Movements: <span className="font-mono">{movementDrawerSku}</span></span>
-              </h3>
-              <button
-                onClick={() => setMovementDrawerSku(null)}
-                className="text-neutral-400 hover:text-neutral-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
+          <div
+            className="fixed inset-0 bg-neutral-950/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setMovementDrawerSku(null)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8 z-50 pointer-events-auto">
+            <div
+              className="w-screen max-w-md bg-white dark:bg-[#0d1526] h-full p-6 space-y-4 shadow-2xl border-l border-neutral-300 dark:border-white/10 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-neutral-200 dark:border-white/10 pb-3">
+                <h3 className="font-bold text-base text-neutral-900 dark:text-slate-200 flex items-center gap-2">
+                  <History className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+                  <span>Stock Movements: <span className="font-mono">{movementDrawerSku}</span></span>
+                </h3>
+                <button
+                  onClick={() => setMovementDrawerSku(null)}
+                  className="text-neutral-400 hover:text-neutral-700 dark:hover:text-slate-200 p-1"
+                  aria-label="Close drawer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
             {movementLoading ? (
               <div className="text-xs text-neutral-500 dark:text-slate-400 py-8 text-center font-mono">
@@ -1263,6 +1273,7 @@ export function AdminView({
             )}
           </div>
         </div>
+      </div>
       )}
     </div>
   );

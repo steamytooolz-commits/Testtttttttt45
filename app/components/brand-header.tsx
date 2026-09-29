@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import {
   LayoutGrid,
   Zap,
@@ -20,6 +21,8 @@ import {
 } from 'lucide-react';
 import { LogoutButton } from './logout-button';
 import { ThemeToggle } from './theme-toggle';
+
+const emptySubscribe = () => () => {};
 
 export const RETAIL_SITE_URL = 'https://thestationerydepot.co.za';
 
@@ -100,6 +103,7 @@ export function SiteHeader({
   nav: SiteNavItem[];
 }) {
   const [open, setOpen] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
   const approved = session?.status === 'APPROVED';
 
@@ -152,120 +156,36 @@ export function SiteHeader({
     { label: 'School Customer', email: 'orders@peninsulaschools.org', desc: 'Peninsula Schools (Education: 12%)' },
   ];
 
-  return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200/80 dark:border-white/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 shadow-card dark:bg-[#0d1526]/95 dark:border-white/10">
-      <div className="h-1 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-400" aria-hidden="true" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 flex items-center justify-between gap-2 sm:gap-4">
-        <BrandHeaderLeft compact={true} />
+  const drawerContent = (
+    <div id="mobile-nav-drawer" className="lg:hidden fixed inset-0 z-[9999] overflow-hidden" role="dialog" aria-modal="true">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-neutral-950/70 backdrop-blur-xs transition-opacity"
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
 
-        {/* Desktop Primary Nav */}
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
-          {nav.map((item) => {
-            const Icon = NAV_ICONS[item.icon];
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={item.active ? 'page' : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
-                  item.active
-                    ? 'bg-brand-50 text-brand-800 dark:bg-brand-950/70 dark:text-brand-200'
-                    : 'text-neutral-600 dark:text-slate-300 hover:text-brand-800 hover:bg-neutral-100 dark:bg-white/[0.08] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
-                }`}
-              >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Desktop Session / Auth actions */}
-        <div className="hidden lg:flex items-center gap-2">
-          <ThemeToggle />
-          {session ? (
-            <>
-              <div className="text-right leading-tight">
-                <div className="text-xs font-semibold text-neutral-800 max-w-[180px] truncate dark:text-slate-200" title={session.email}>
-                  {session.email}
-                </div>
-                <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                  {approved ? (
-                    <span className="badge-emerald">{session.tierCode || 'APPROVED'}</span>
-                  ) : (
-                    <span className="badge-amber">PENDING APPROVAL</span>
-                  )}
-                </div>
+      {/* Drawer Sheet */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-8 z-[10000] pointer-events-auto">
+        <div
+          className="w-screen max-w-sm sm:max-w-md bg-white dark:bg-[#0d1526] h-full shadow-2xl flex flex-col border-l border-neutral-200 dark:border-white/10 overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Drawer Header */}
+          <div className="p-4 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-neutral-50 dark:bg-white/[0.03] shrink-0">
+            <div className="flex items-center gap-3">
+              <BrandMark size={32} />
+              <div>
+                <span className="font-bold text-sm tracking-tight block text-brand-950 dark:text-white">
+                  STATIONERY DEPOT
+                </span>
+                <span className="text-[9px] text-brand-700 dark:text-brand-300 uppercase tracking-widest font-semibold block">
+                  B2B Portal Menu
+                </span>
               </div>
-              <LogoutButton
-                csrfToken={session.csrfToken}
-                className="btn-ghost !px-2.5"
-                aria-label="Log out"
-              >
-                <LogOut className="w-4 h-4" aria-hidden="true" />
-              </LogoutButton>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="btn-ghost">
-                Trade Sign In
-              </Link>
-              <Link href="/register" className="btn-primary">
-                Open Trade Account
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Action Bar (Direct Cart + Theme + Drawer Toggle) */}
-        <div className="flex lg:hidden items-center gap-1">
-          <Link
-            href="/cart"
-            className="inline-flex items-center justify-center p-2 rounded-md text-neutral-700 hover:bg-neutral-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
-            aria-label="Shopping Cart"
-            title="Wholesale Cart"
-          >
-            <ShoppingCart className="w-5 h-5 text-brand-800 dark:text-brand-300" aria-hidden="true" />
-          </Link>
-          <ThemeToggle />
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-neutral-700 hover:bg-neutral-100 dark:bg-white/[0.08] dark:text-slate-300 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/60 min-w-[42px] min-h-[42px]"
-            aria-expanded={open}
-            aria-controls="mobile-nav-drawer"
-            aria-label={open ? 'Close wholesale menu' : 'Open wholesale menu'}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Slide-Over Drawer with Backdrop */}
-      {open && (
-        <div id="mobile-nav-drawer" className="lg:hidden fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-neutral-950/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-
-          {/* Drawer Sheet */}
-          <div className="relative w-full max-w-sm sm:max-w-md bg-white dark:bg-[#0d1526] h-full shadow-2xl flex flex-col z-10 border-l border-neutral-200 dark:border-white/10 overflow-y-auto">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-neutral-50 dark:bg-white/[0.03] shrink-0">
-              <div className="flex items-center gap-3">
-                <BrandMark size={32} />
-                <div>
-                  <span className="font-bold text-sm tracking-tight block text-brand-950 dark:text-white">
-                    STATIONERY DEPOT
-                  </span>
-                  <span className="text-[9px] text-brand-700 dark:text-brand-300 uppercase tracking-widest font-semibold block">
-                    B2B Portal Menu
-                  </span>
-                </div>
-              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -275,77 +195,114 @@ export function SiteHeader({
                 <X className="w-5 h-5" />
               </button>
             </div>
+          </div>
 
-            {/* Drawer Content */}
-            <div className="p-4 space-y-5 flex-1">
-              {/* Account Status / Auth Banner */}
-              {session ? (
-                <div className="p-3.5 rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50/80 dark:bg-white/[0.04] space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-medium text-neutral-500 dark:text-slate-400 uppercase tracking-wider">
-                        Authenticated Session
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white truncate" title={session.email}>
-                        {session.email}
-                      </div>
+          {/* Drawer Content */}
+          <div className="p-4 space-y-5 flex-1">
+            {/* Account Status / Auth Banner */}
+            {session ? (
+              <div className="p-3.5 rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50/80 dark:bg-white/[0.04] space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-neutral-500 dark:text-slate-400 uppercase tracking-wider">
+                      Authenticated Session
                     </div>
-                    {approved ? (
-                      <span className="badge-emerald shrink-0">{session.tierCode || 'APPROVED'}</span>
-                    ) : (
-                      <span className="badge-amber shrink-0">PENDING</span>
-                    )}
+                    <div className="text-sm font-bold text-neutral-900 dark:text-white truncate" title={session.email}>
+                      {session.email}
+                    </div>
                   </div>
-                  <div className="pt-2 border-t border-neutral-200 dark:border-white/10 flex items-center justify-between">
-                    <Link
-                      href="/account"
-                      onClick={() => setOpen(false)}
-                      className="text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline flex items-center gap-1"
-                    >
-                      <UserRound className="w-3.5 h-3.5" />
-                      View Account & Tiers
-                    </Link>
-                    <LogoutButton csrfToken={session.csrfToken} className="btn-ghost !text-xs !py-1 !px-2">
-                      <LogOut className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
-                      Sign out
-                    </LogoutButton>
-                  </div>
+                  {approved ? (
+                    <span className="badge-emerald shrink-0">{session.tierCode || 'APPROVED'}</span>
+                  ) : (
+                    <span className="badge-amber shrink-0">PENDING</span>
+                  )}
                 </div>
-              ) : (
-                <div className="p-3.5 rounded-lg border border-brand-200 dark:border-brand-900/60 bg-brand-50/70 dark:bg-brand-950/40 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-brand-700 dark:text-brand-300 shrink-0" />
-                    <span className="text-xs font-bold text-brand-950 dark:text-white">Trade-Only Portal</span>
-                  </div>
-                  <p className="text-xs text-brand-900/90 dark:text-brand-200/90 leading-relaxed">
-                    Sign in to view your quoted rates, load quick matrix orders, and check out with SARS VAT tax invoices.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <Link
-                      href="/login"
-                      onClick={() => setOpen(false)}
-                      className="btn-secondary !text-xs !py-2 text-center justify-center font-bold"
-                    >
-                      Trade Sign In
-                    </Link>
-                    <Link
-                      href="/register"
-                      onClick={() => setOpen(false)}
-                      className="btn-primary !text-xs !py-2 text-center justify-center font-bold"
-                    >
-                      Open Account
-                    </Link>
-                  </div>
+                <div className="pt-2 border-t border-neutral-200 dark:border-white/10 flex items-center justify-between">
+                  <Link
+                    href="/account"
+                    onClick={() => setOpen(false)}
+                    className="text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline flex items-center gap-1"
+                  >
+                    <UserRound className="w-3.5 h-3.5" />
+                    View Account & Tiers
+                  </Link>
+                  <LogoutButton csrfToken={session.csrfToken} className="btn-ghost !text-xs !py-1 !px-2">
+                    <LogOut className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                    Sign out
+                  </LogoutButton>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-lg border border-brand-200 dark:border-brand-900/60 bg-brand-50/70 dark:bg-brand-950/40 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-brand-700 dark:text-brand-300 shrink-0" />
+                  <span className="text-xs font-bold text-brand-950 dark:text-white">Trade-Only Portal</span>
+                </div>
+                <p className="text-xs text-brand-900/90 dark:text-brand-200/90 leading-relaxed">
+                  Sign in to view your quoted rates, load quick matrix orders, and check out with SARS VAT tax invoices.
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="btn-secondary !text-xs !py-2 text-center justify-center font-bold"
+                  >
+                    Trade Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setOpen(false)}
+                    className="btn-primary !text-xs !py-2 text-center justify-center font-bold"
+                  >
+                    Open Account
+                  </Link>
+                </div>
+              </div>
+            )}
 
-              {/* Primary Wholesale Navigation Links */}
+            {/* Primary Wholesale Navigation Links */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-slate-400 mb-2 px-1">
+                Wholesale Operations
+              </p>
+              <div className="space-y-1">
+                {allMobilePortalLinks.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-800 dark:text-slate-200 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-md bg-brand-50 dark:bg-brand-950/70 text-brand-700 dark:text-brand-300 group-hover:bg-brand-100 shrink-0">
+                          <Icon className="w-4 h-4" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                            {item.label}
+                          </div>
+                          <div className="text-[11px] text-neutral-500 dark:text-slate-400 truncate">
+                            {item.description}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-slate-200 shrink-0 ml-2" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Staff / Admin Operations (when authenticated with staff/admin role) */}
+            {staffOperationsLinks.length > 0 && (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-slate-400 mb-2 px-1">
-                  Wholesale Operations
+                  Staff & Admin Controls
                 </p>
                 <div className="space-y-1">
-                  {allMobilePortalLinks.map((item) => {
+                  {staffOperationsLinks.map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link
@@ -355,7 +312,7 @@ export function SiteHeader({
                         className="flex items-center justify-between p-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-800 dark:text-slate-200 transition-colors group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2 rounded-md bg-brand-50 dark:bg-brand-950/70 text-brand-700 dark:text-brand-300 group-hover:bg-brand-100 shrink-0">
+                          <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 shrink-0">
                             <Icon className="w-4 h-4" aria-hidden="true" />
                           </div>
                           <div className="min-w-0">
@@ -373,131 +330,188 @@ export function SiteHeader({
                   })}
                 </div>
               </div>
+            )}
 
-              {/* Staff / Admin Operations (when authenticated with staff/admin role) */}
-              {staffOperationsLinks.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-slate-400 mb-2 px-1">
-                    Staff & Admin Controls
+            {/* Demo Accounts Quick-Switch Helper (Private Demo Testing) */}
+            <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50/60 dark:bg-white/[0.02] p-3">
+              <button
+                type="button"
+                onClick={() => setShowDemoAccounts((v) => !v)}
+                className="w-full flex items-center justify-between text-left text-xs font-bold text-neutral-800 dark:text-slate-200"
+              >
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-3.5 h-3.5 text-brand-700 dark:text-brand-400" />
+                  <span>Demo Accounts & Passwords</span>
+                </div>
+                <span className="text-[10px] text-brand-700 dark:text-brand-300 font-mono">
+                  {showDemoAccounts ? 'Hide ▲' : 'Show ▼'}
+                </span>
+              </button>
+              {showDemoAccounts && (
+                <div className="mt-3 space-y-2 pt-2 border-t border-neutral-200 dark:border-white/10 text-xs font-mono">
+                  <p className="text-[11px] font-sans text-neutral-500 dark:text-slate-400">
+                    Standard demo password: <span className="font-mono font-bold text-neutral-900 dark:text-white">password123</span>
                   </p>
-                  <div className="space-y-1">
-                    {staffOperationsLinks.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setOpen(false)}
-                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-800 dark:text-slate-200 transition-colors group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 shrink-0">
-                              <Icon className="w-4 h-4" aria-hidden="true" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                                {item.label}
-                              </div>
-                              <div className="text-[11px] text-neutral-500 dark:text-slate-400 truncate">
-                                {item.description}
-                              </div>
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-slate-200 shrink-0 ml-2" />
-                        </Link>
-                      );
-                    })}
-                  </div>
+                  {demoAccounts.map((acc) => (
+                    <Link
+                      key={acc.email}
+                      href="/login"
+                      onClick={() => setOpen(false)}
+                      className="block p-2 rounded bg-white dark:bg-white/[0.05] border border-neutral-200 dark:border-white/10 hover:border-brand-500 transition-colors"
+                    >
+                      <div className="font-bold font-sans text-neutral-900 dark:text-white flex items-center justify-between">
+                        <span>{acc.label}</span>
+                        <span className="text-[10px] text-brand-700 dark:text-brand-300 font-sans">1-tap login &rarr;</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 dark:text-slate-400 truncate">{acc.email}</div>
+                    </Link>
+                  ))}
                 </div>
               )}
-
-              {/* Demo Accounts Quick-Switch Helper (Private Demo Testing) */}
-              <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50/60 dark:bg-white/[0.02] p-3">
-                <button
-                  type="button"
-                  onClick={() => setShowDemoAccounts((v) => !v)}
-                  className="w-full flex items-center justify-between text-left text-xs font-bold text-neutral-800 dark:text-slate-200"
-                >
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="w-3.5 h-3.5 text-brand-700 dark:text-brand-400" />
-                    <span>Demo Accounts & Passwords</span>
-                  </div>
-                  <span className="text-[10px] text-brand-700 dark:text-brand-300 font-mono">
-                    {showDemoAccounts ? 'Hide ▲' : 'Show ▼'}
-                  </span>
-                </button>
-                {showDemoAccounts && (
-                  <div className="mt-3 space-y-2 pt-2 border-t border-neutral-200 dark:border-white/10 text-xs font-mono">
-                    <p className="text-[11px] font-sans text-neutral-500 dark:text-slate-400">
-                      Standard demo password: <span className="font-mono font-bold text-neutral-900 dark:text-white">password123</span>
-                    </p>
-                    {demoAccounts.map((acc) => (
-                      <Link
-                        key={acc.email}
-                        href="/login"
-                        onClick={() => setOpen(false)}
-                        className="block p-2 rounded bg-white dark:bg-white/[0.05] border border-neutral-200 dark:border-white/10 hover:border-brand-500 transition-colors"
-                      >
-                        <div className="font-bold font-sans text-neutral-900 dark:text-white flex items-center justify-between">
-                          <span>{acc.label}</span>
-                          <span className="text-[10px] text-brand-700 dark:text-brand-300 font-sans">1-tap login &rarr;</span>
-                        </div>
-                        <div className="text-[10px] text-neutral-500 dark:text-slate-400 truncate">{acc.email}</div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Company & Compliance Links */}
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-slate-400 mb-2 px-1">
-                  Policies & Store
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Link
-                    href="/terms"
-                    onClick={() => setOpen(false)}
-                    className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
-                  >
-                    Wholesale Terms
-                  </Link>
-                  <Link
-                    href="/privacy"
-                    onClick={() => setOpen(false)}
-                    className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
-                  >
-                    Privacy Policy
-                  </Link>
-                  <Link
-                    href="/popia"
-                    onClick={() => setOpen(false)}
-                    className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
-                  >
-                    POPIA Notice
-                  </Link>
-                  <a
-                    href={RETAIL_SITE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-brand-700 dark:text-brand-300 font-semibold flex items-center justify-between"
-                  >
-                    <span>Retail Store</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
             </div>
 
-            {/* Drawer Footer */}
-            <div className="p-4 border-t border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400 shrink-0">
-              <span className="font-semibold">Stationery Depot B2B</span>
-              <span className="font-mono text-[11px]">South Africa</span>
+            {/* Company & Compliance Links */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-slate-400 mb-2 px-1">
+                Policies & Store
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Link
+                  href="/terms"
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
+                >
+                  Wholesale Terms
+                </Link>
+                <Link
+                  href="/privacy"
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
+                >
+                  Privacy Policy
+                </Link>
+                <Link
+                  href="/popia"
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-neutral-700 dark:text-slate-300 hover:text-brand-800"
+                >
+                  POPIA Notice
+                </Link>
+                <a
+                  href={RETAIL_SITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded bg-neutral-50 dark:bg-white/[0.04] text-brand-700 dark:text-brand-300 font-semibold flex items-center justify-between"
+                >
+                  <span>Retail Store</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
+
+          {/* Drawer Footer */}
+          <div className="p-4 border-t border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400 shrink-0">
+            <span className="font-semibold">Stationery Depot B2B</span>
+            <span className="font-mono text-[11px]">South Africa</span>
+          </div>
         </div>
-      )}
-    </header>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <header className="sticky top-0 z-30 border-b border-neutral-200/80 dark:border-white/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 shadow-card dark:bg-[#0d1526]/95 dark:border-white/10">
+        <div className="h-1 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-400" aria-hidden="true" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <BrandHeaderLeft compact={true} />
+
+          {/* Desktop Primary Nav */}
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
+            {nav.map((item) => {
+              const Icon = NAV_ICONS[item.icon];
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={item.active ? 'page' : undefined}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                    item.active
+                      ? 'bg-brand-50 text-brand-800 dark:bg-brand-950/70 dark:text-brand-200'
+                      : 'text-neutral-600 dark:text-slate-300 hover:text-brand-800 hover:bg-neutral-100 dark:bg-white/[0.08] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Desktop Session / Auth actions */}
+          <div className="hidden lg:flex items-center gap-2">
+            <ThemeToggle />
+            {session ? (
+              <>
+                <div className="text-right leading-tight">
+                  <div className="text-xs font-semibold text-neutral-800 max-w-[180px] truncate dark:text-slate-200" title={session.email}>
+                    {session.email}
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                    {approved ? (
+                      <span className="badge-emerald">{session.tierCode || 'APPROVED'}</span>
+                    ) : (
+                      <span className="badge-amber">PENDING APPROVAL</span>
+                    )}
+                  </div>
+                </div>
+                <LogoutButton
+                  csrfToken={session.csrfToken}
+                  className="btn-ghost !px-2.5"
+                  aria-label="Log out"
+                >
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
+                </LogoutButton>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="btn-ghost">
+                  Trade Sign In
+                </Link>
+                <Link href="/register" className="btn-primary">
+                  Open Trade Account
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Action Bar (Direct Cart + Theme + Drawer Toggle) */}
+          <div className="flex lg:hidden items-center gap-1">
+            <Link
+              href="/cart"
+              className="inline-flex items-center justify-center p-2 rounded-md text-neutral-700 hover:bg-neutral-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+              aria-label="Shopping Cart"
+              title="Wholesale Cart"
+            >
+              <ShoppingCart className="w-5 h-5 text-brand-800 dark:text-brand-300" aria-hidden="true" />
+            </Link>
+            <ThemeToggle />
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md p-2 text-neutral-700 hover:bg-neutral-100 dark:bg-white/[0.08] dark:text-slate-300 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/60 min-w-[42px] min-h-[42px]"
+              aria-expanded={open}
+              aria-controls="mobile-nav-drawer"
+              aria-label={open ? 'Close wholesale menu' : 'Open wholesale menu'}
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </header>
+      {mounted && open && createPortal(drawerContent, document.body)}
+    </>
   );
 }
 

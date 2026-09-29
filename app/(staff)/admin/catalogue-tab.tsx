@@ -376,96 +376,96 @@ export function CatalogueTab({ initialProducts, csrfToken, isAdmin }: CatalogueT
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-white/[0.04] rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-neutral-300 my-8">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
-              <h3 className="font-bold text-brand-950 flex items-center gap-2">
-                <Package className="w-4 h-4 text-brand-700" />
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-[#101a2c] rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-neutral-300 dark:border-white/10 my-8">
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-white/10 pb-3">
+              <h3 className="font-bold text-brand-950 dark:text-white flex items-center gap-2">
+                <Package className="w-4 h-4 text-brand-700 dark:text-brand-400" />
                 <span>{editingSku ? `Edit ${editingSku}` : 'New Product'}</span>
               </h3>
-              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 bg-neutral-100 dark:bg-white/[0.08] hover:bg-neutral-200 rounded-lg">
+              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 bg-neutral-100 dark:bg-white/[0.08] hover:bg-neutral-200 dark:hover:bg-white/20 rounded-lg text-neutral-600 dark:text-slate-300">
                 <X className="w-4 h-4" />
               </button>
             </div>
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs font-medium rounded-lg">
+              <div className="p-3 bg-rose-50 border border-rose-200 dark:bg-rose-950/60 dark:border-rose-500/40 text-rose-900 dark:text-rose-200 text-xs font-medium rounded-lg">
                 {formError}
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">SKU</label>
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">SKU</label>
                 <input
                   value={form.sku}
                   disabled={!!editingSku}
                   onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase() })}
                   required
                   placeholder="SKU-..."
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-brand-700 disabled:bg-neutral-100"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg font-mono text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100 disabled:bg-neutral-100 dark:disabled:bg-white/5"
                 />
               </div>
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Category</label>
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Category</label>
                 <input
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                   required
                   placeholder="paper / writing / filing"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Name</label>
+              <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Name</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
               />
             </div>
             <div>
-              <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Description</label>
+              <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Description</label>
               <textarea
                 rows={2}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Paper Weight</label>
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Paper Weight</label>
                 <input
                   value={form.paperWeight}
                   onChange={(e) => setForm({ ...form, paperWeight: e.target.value })}
                   placeholder="80gsm"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Pack Count</label>
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Pack Count</label>
                 <input
                   value={form.packCount}
                   onChange={(e) => setForm({ ...form, packCount: e.target.value })}
                   placeholder="500"
                   inputMode="numeric"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                 />
               </div>
               <div>
-                <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Colour</label>
+                <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Colour</label>
                 <input
                   value={form.colour}
                   onChange={(e) => setForm({ ...form, colour: e.target.value })}
                   placeholder="White"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                  className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                 />
               </div>
             </div>
-            <div className="border border-brand-200 rounded-xl p-3 bg-brand-50/50 space-y-2">
-              <label className="font-bold uppercase tracking-wider text-[11px] text-brand-950 flex items-center gap-1.5">
-                <ImagePlus className="w-4 h-4 text-brand-700" />
-                <span>Product Image (required look: every product shows an image)</span>
+            <div className="border border-brand-200 dark:border-brand-900/60 rounded-xl p-3 bg-brand-50/50 dark:bg-brand-950/40 space-y-2">
+              <label className="font-bold uppercase tracking-wider text-[11px] text-brand-950 dark:text-brand-200 flex items-center gap-1.5">
+                <ImagePlus className="w-4 h-4 text-brand-700 dark:text-brand-400" />
+                <span>Product Image</span>
               </label>
               <div className="flex items-center gap-3">
                 <img
@@ -473,16 +473,16 @@ export function CatalogueTab({ initialProducts, csrfToken, isAdmin }: CatalogueT
                   alt="Preview"
                   width={96}
                   height={72}
-                  className="w-24 h-[72px] object-cover rounded-lg border border-neutral-300 bg-white"
+                  className="w-24 h-[72px] object-cover rounded-lg border border-neutral-300 dark:border-white/10 bg-white dark:bg-[#0d1526]"
                 />
                 <div className="flex-1 space-y-2">
                   <input
                     value={form.imageUrl}
                     onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
                     placeholder="https://... or /product-images/....jpg"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-brand-700"
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs font-mono focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                   />
-                  <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/[0.04] border border-brand-300 text-brand-800 rounded-lg text-xs font-semibold cursor-pointer hover:bg-brand-100">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#15203a] border border-brand-300 dark:border-brand-700 text-brand-800 dark:text-brand-200 rounded-lg text-xs font-semibold cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-900/50">
                     <span>{uploadingImage ? 'Uploading...' : 'Upload image file'}</span>
                     <input
                       type="file"
@@ -502,22 +502,22 @@ export function CatalogueTab({ initialProducts, csrfToken, isAdmin }: CatalogueT
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {!editingSku && (
                 <div>
-                  <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">Opening Stock Qty</label>
+                  <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">Opening Stock Qty</label>
                   <input
                     value={form.stockQty}
                     onChange={(e) => setForm({ ...form, stockQty: e.target.value })}
                     inputMode="numeric"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-700"
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
                   />
                 </div>
               )}
-              <label className="flex items-center gap-2 text-xs font-semibold text-neutral-800 pt-5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-neutral-800 dark:text-slate-200 pt-5">
                 <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
                 <span>Active (visible in catalogue)</span>
               </label>
             </div>
             <div>
-              <label className="block text-neutral-700 font-bold mb-1 uppercase tracking-wider text-[11px]">
+              <label className="block text-neutral-700 dark:text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
                 Tier Prices (JSON, e.g. {`{"TIER_1": "85.00"}`})
               </label>
               <textarea
@@ -526,14 +526,14 @@ export function CatalogueTab({ initialProducts, csrfToken, isAdmin }: CatalogueT
                 onChange={(e) => setForm({ ...form, prices: e.target.value })}
                 spellCheck={false}
                 placeholder='{"TIER_1": "85.00", "TIER_2": "78.50"}'
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-brand-700"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-white/15 rounded-lg font-mono text-xs focus:ring-2 focus:ring-brand-700 dark:bg-[#0d1526] dark:text-slate-100"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-white/10">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 bg-neutral-100 dark:bg-white/[0.08] hover:bg-neutral-200 text-neutral-800 rounded-lg text-xs font-semibold"
+                className="px-4 py-2 bg-neutral-100 dark:bg-white/[0.08] hover:bg-neutral-200 dark:hover:bg-white/20 text-neutral-800 dark:text-slate-200 rounded-lg text-xs font-semibold"
               >
                 Cancel
               </button>

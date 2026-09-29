@@ -6,7 +6,7 @@ import {
   type ProductDocument,
   type CategoryDocument,
 } from '@/lib/repo/mongo';
-import { getCustomPrice, listCustomPrices } from '@/lib/repo/mysql';
+import { getCustomPrice, listCustomPrices, getCustomerTier } from '@/lib/repo/mysql';
 import {
   computeFilterHash,
   getCachedCatalog,
@@ -189,7 +189,7 @@ export class CatalogService {
     };
   }
 
-   static async getCatalogItemBySku(
+  static async getCatalogItemBySku(
     sku: string,
     session: StoredSession | null
   ): Promise<ApprovedCatalogProduct | null> {
@@ -205,27 +205,42 @@ export class CatalogService {
 
     const customerId = session.customerId || 0;
     const custom = await getCustomPrice(customerId, normSku);
-    if (!custom) {
-      return null;
+    if (custom) {
+      return {
+        ...sanitizePublicProduct(rawProduct),
+        unit_price: custom,
+        tier_code: 'CUSTOM',
+        tier_name: 'Quoted Price',
+      };
     }
-    return {
-      ...sanitizePublicProduct(rawProduct),
-      unit_price: custom,
-      tier_code: 'CUSTOM',
-      tier_name: 'Quoted Price',
-    };
+
+    return null;
   }
 
-   static async getCustomerTierPrice(
+  static async getCustomerTierPrice(
     customerId: number,
     sku: string
   ): Promise<{ unitPrice: string; tierCode: string; tierName: string } | null> {
     const normSku = sku.trim().toUpperCase();
     const custom = await getCustomPrice(customerId, normSku);
-    if (!custom) {
-      return null;
+    if (custom) {
+      return { unitPrice: custom, tierCode: 'CUSTOM', tierName: 'Quoted Price' };
     }
-    return { unitPrice: custom, tierCode: 'CUSTOM', tierName: 'Quoted Price' };
+
+    const tier = await getCustomerTier(customerId);
+    if (tier && tier.basis) {
+      try {
+        const basisMap = JSON.parse(tier.basis) as Record<string, string>;
+        const price = basisMap[normSku];
+        if (price) {
+          return { unitPrice: price, tierCode: tier.code, tierName: tier.name };
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return null;
   }
 
    static async getCategories(): Promise<CategoryDocument[]> {

@@ -667,6 +667,7 @@ class MemorySqlDb {
 
       const userCount = await db.collection('users').countDocuments();
       if (userCount === 0) {
+        logger.info('Hydrating MongoDB with baseline SQL tables and fixtures...');
         const users = Array.from(this.users.values()).map((u) => ({ ...u })) as Record<string, unknown>[];
         if (users.length > 0) await db.collection<Record<string, unknown>>('users').insertMany(users);
 
@@ -688,87 +689,130 @@ class MemorySqlDb {
         const orders = Array.from(this.salesOrders.values()).map((o) => ({ ...o })) as Record<string, unknown>[];
         if (orders.length > 0) await db.collection<Record<string, unknown>>('sales_orders').insertMany(orders);
 
+        const linesList = Array.from(this.salesOrderLines.entries()).map(([order_id, lines]) => ({ order_id, lines }));
+        if (linesList.length > 0) await db.collection<Record<string, unknown>>('sales_order_lines').insertMany(linesList);
+
         const invoices = Array.from(this.invoices.values()).map((i) => ({ ...i })) as Record<string, unknown>[];
         if (invoices.length > 0) await db.collection<Record<string, unknown>>('invoices').insertMany(invoices);
+
+        logger.info('MongoDB baseline fixtures hydrated successfully.');
       } else {
         const users = await db.collection<UserRow>('users').find().toArray();
         for (const u of users) {
-          this.users.set(u.id, u);
-          if (u.id >= this.userSeq) this.userSeq = u.id + 1;
+          const { ...clean } = u as unknown as UserRow;
+          this.users.set(clean.id, clean);
+          if (clean.id >= this.userSeq) this.userSeq = clean.id + 1;
         }
 
         const customers = await db.collection<CustomerRow>('customers').find().toArray();
         for (const c of customers) {
-          this.customers.set(c.id, c);
-          if (c.id >= this.customerSeq) this.customerSeq = c.id + 1;
+          const { ...clean } = c as unknown as CustomerRow;
+          this.customers.set(clean.id, clean);
+          if (clean.id >= this.customerSeq) this.customerSeq = clean.id + 1;
         }
 
         const priceTiers = await db.collection<PriceTierRow>('price_tiers').find().toArray();
         for (const t of priceTiers) {
-          this.priceTiers.set(t.id, t);
+          const { ...clean } = t as unknown as PriceTierRow;
+          this.priceTiers.set(clean.id, clean);
         }
 
         const tierAssigns = await db.collection<CustomerTierAssignmentRow>('customer_tier_assignments').find().toArray();
         for (const a of tierAssigns) {
-          this.customerTierAssignments.set(a.customer_id, a);
+          const { ...clean } = a as unknown as CustomerTierAssignmentRow;
+          this.customerTierAssignments.set(clean.customer_id, clean);
         }
 
         const customPrices = await db.collection<CustomerProductPriceRow>('customer_product_prices').find().toArray();
         for (const p of customPrices) {
-          const key = `${p.customer_id}:${p.sku.trim().toUpperCase()}`;
-          this.customProductPrices.set(key, p);
+          const { ...clean } = p as unknown as CustomerProductPriceRow;
+          const key = `${clean.customer_id}:${clean.sku.trim().toUpperCase()}`;
+          this.customProductPrices.set(key, clean);
         }
 
         const stock = await db.collection<StockBalanceRow>('stock_balances').find().toArray();
         for (const s of stock) {
-          this.stockBalances.set(s.sku, s);
+          const { ...clean } = s as unknown as StockBalanceRow;
+          this.stockBalances.set(clean.sku, clean);
         }
 
         const movements = await db.collection<StockMovementRow>('stock_movements').find().toArray();
         for (const m of movements) {
-          this.stockMovements.push(m);
-          if (m.id >= this.stockMovementSeq) this.stockMovementSeq = m.id + 1;
+          const { ...clean } = m as unknown as StockMovementRow;
+          this.stockMovements.push(clean);
+          if (clean.id >= this.stockMovementSeq) this.stockMovementSeq = clean.id + 1;
         }
 
         const orders = await db.collection<SalesOrderRow>('sales_orders').find().toArray();
         for (const o of orders) {
-          this.salesOrders.set(o.id, o);
-          if (o.id >= this.salesOrderSeq) this.salesOrderSeq = o.id + 1;
+          const { ...clean } = o as unknown as SalesOrderRow;
+          this.salesOrders.set(clean.id, clean);
+          if (clean.id >= this.salesOrderSeq) this.salesOrderSeq = clean.id + 1;
         }
 
         const linesList = await db.collection<{ order_id: number; lines: SalesOrderLineRow[] }>('sales_order_lines').find().toArray();
         for (const entry of linesList) {
           this.salesOrderLines.set(entry.order_id, entry.lines);
+          for (const line of entry.lines) {
+            if (line.id >= this.salesOrderLineSeq) this.salesOrderLineSeq = line.id + 1;
+          }
         }
 
         const invoices = await db.collection<InvoiceRow>('invoices').find().toArray();
+        let maxInvoiceNum = 10001;
         for (const i of invoices) {
-          this.invoices.set(i.id, i);
-          if (i.id >= this.invoiceRowSeq) this.invoiceRowSeq = i.id + 1;
+          const { ...clean } = i as unknown as InvoiceRow;
+          this.invoices.set(clean.id, clean);
+          if (clean.id >= this.invoiceRowSeq) this.invoiceRowSeq = clean.id + 1;
+          const parsedNum = parseInt(clean.invoice_number.replace(/\D/g, ''), 10);
+          if (!isNaN(parsedNum) && parsedNum >= maxInvoiceNum) maxInvoiceNum = parsedNum + 1;
         }
+        this.invoiceSequences.set(1, maxInvoiceNum);
 
         const creditNotes = await db.collection<CreditNoteRow>('credit_notes').find().toArray();
+        let maxCreditNoteNum = 50001;
         for (const cn of creditNotes) {
-          this.creditNotes.set(cn.id, cn);
-          if (cn.id >= this.creditNoteRowSeq) this.creditNoteRowSeq = cn.id + 1;
+          const { ...clean } = cn as unknown as CreditNoteRow;
+          this.creditNotes.set(clean.id, clean);
+          if (clean.id >= this.creditNoteRowSeq) this.creditNoteRowSeq = clean.id + 1;
+          const parsedNum = parseInt(clean.credit_number.replace(/\D/g, ''), 10);
+          if (!isNaN(parsedNum) && parsedNum >= maxCreditNoteNum) maxCreditNoteNum = parsedNum + 1;
         }
+        this.creditNoteSequences.set(1, maxCreditNoteNum);
 
         const paymentProofs = await db.collection<PaymentProofRow>('payment_proofs').find().toArray();
         for (const p of paymentProofs) {
-          this.paymentProofs.push(p);
-          if (p.id >= this.paymentProofSeq) this.paymentProofSeq = p.id + 1;
+          const { ...clean } = p as unknown as PaymentProofRow;
+          this.paymentProofs.push(clean);
+          if (clean.id >= this.paymentProofSeq) this.paymentProofSeq = clean.id + 1;
         }
 
         const resetReqs = await db.collection<PasswordResetRequestRow>('password_reset_requests').find().toArray();
         for (const r of resetReqs) {
-          this.passwordResetRequests.set(r.id, r);
-          if (r.id >= this.passwordResetRequestSeq) this.passwordResetRequestSeq = r.id + 1;
+          const { ...clean } = r as unknown as PasswordResetRequestRow;
+          this.passwordResetRequests.set(clean.id, clean);
+          if (clean.id >= this.passwordResetRequestSeq) this.passwordResetRequestSeq = clean.id + 1;
         }
 
         const reqTemplates = await db.collection<RequisitionTemplateRow>('requisition_templates').find().toArray();
         for (const t of reqTemplates) {
-          this.requisitionTemplates.set(t.id, t);
-          if (t.id >= this.requisitionTemplateSeq) this.requisitionTemplateSeq = t.id + 1;
+          const { ...clean } = t as unknown as RequisitionTemplateRow;
+          this.requisitionTemplates.set(clean.id, clean);
+          if (clean.id >= this.requisitionTemplateSeq) this.requisitionTemplateSeq = clean.id + 1;
+        }
+
+        const draftOrders = await db.collection<DraftOrderRow>('draft_orders').find().toArray();
+        for (const d of draftOrders) {
+          const { ...clean } = d as unknown as DraftOrderRow;
+          this.draftOrders.set(clean.customer_id, clean);
+          if (clean.id >= this.draftOrderSeq) this.draftOrderSeq = clean.id + 1;
+        }
+
+        const auditLogs = await db.collection<AuditLogRow>('audit_logs').find().toArray();
+        for (const a of auditLogs) {
+          const { ...clean } = a as unknown as AuditLogRow;
+          this.auditLogs.push(clean);
+          if (clean.id >= this.auditSeq) this.auditSeq = clean.id + 1;
         }
       }
     } catch (err) {
@@ -780,9 +824,13 @@ class MemorySqlDb {
     try {
       const db = await getMongoDb();
       if (!db) return;
-      await db.collection(collection).updateOne(filter, { $set: update }, { upsert: true });
-    } catch {
-      // safe fallback
+      const cleanUpdate = { ...update };
+      delete (cleanUpdate as Record<string, unknown>)._id;
+      await db.collection(collection).updateOne(filter, { $set: cleanUpdate }, { upsert: true });
+    } catch (err) {
+      logger.error(`Failed to persist to MongoDB collection: ${collection}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -791,8 +839,10 @@ class MemorySqlDb {
       const db = await getMongoDb();
       if (!db) return;
       await db.collection(collection).deleteOne(filter);
-    } catch {
-      // safe fallback
+    } catch (err) {
+      logger.error(`Failed to delete from MongoDB collection: ${collection}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

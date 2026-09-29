@@ -203,6 +203,7 @@ export async function createCustomerAndUser(
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const customer = memoryDb.insertCustomer({
       company_name: customerData.company_name,
       contact_name: customerData.contact_name,
@@ -452,6 +453,7 @@ export async function createStaffUser(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.insertUser({
       customer_id: null,
       role,
@@ -478,6 +480,7 @@ export async function listStaffUsers(): Promise<StaffUserInfo[]> {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return [...memoryDb.users.values()]
       .filter((u) => u.role === 'SALES_STAFF' || u.role === 'ADMIN')
       .sort((a, b) => a.id - b.id)
@@ -515,6 +518,7 @@ export async function createPasswordResetRequest(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.insertPasswordResetRequest({
       user_id: params.userId,
       email: normalizedEmail,
@@ -538,6 +542,7 @@ export async function findPasswordResetRequestById(id: number): Promise<import('
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row = memoryDb.passwordResetRequests.get(id);
     return row ? { ...row } : null;
   }
@@ -554,6 +559,7 @@ export async function findPendingPasswordResetRequestByEmail(email: string): Pro
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     for (const row of memoryDb.passwordResetRequests.values()) {
       if (row.email.toLowerCase() === normalizedEmail && row.status === 'PENDING') {
         return { ...row };
@@ -576,6 +582,7 @@ export async function listPasswordResetRequests(status: import('./types').Passwo
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return Array.from(memoryDb.passwordResetRequests.values())
       .filter((r) => status === 'ALL' || r.status === status)
       .sort((a, b) => b.id - a.id)
@@ -604,11 +611,13 @@ export async function resolvePasswordResetRequest(
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row = memoryDb.passwordResetRequests.get(id);
     if (row) {
       row.status = status;
       row.resolved_at = new Date().toISOString();
       row.resolved_by = resolvedBy;
+      memoryDb.savePasswordResetRequest(row);
     }
     return;
   }
@@ -635,6 +644,7 @@ export async function createCreditNote(params: {
   }
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     let invoice: import('./types').InvoiceRow | undefined;
     for (const inv of memoryDb.invoices.values()) {
       if (inv.id === invoiceId) {
@@ -664,8 +674,9 @@ export async function createCreditNote(params: {
       if (stock) {
         stock.qty += line.qty;
         stock.updated_at = now;
+        memoryDb.saveStockBalance(stock);
       }
-      memoryDb.stockMovements.push({
+      const movement: StockMovementRow = {
         id: memoryDb.stockMovements.length + 1,
         sku: line.sku,
         delta: line.qty,
@@ -674,7 +685,8 @@ export async function createCreditNote(params: {
         ref_id: invoice.invoice_number,
         actor: actorId,
         created_at: now,
-      });
+      };
+      memoryDb.saveStockMovement(movement);
     }
     const currentSeq = memoryDb.creditNoteSequences.get(1) || 50001;
     memoryDb.creditNoteSequences.set(1, currentSeq + 1);
@@ -693,8 +705,9 @@ export async function createCreditNote(params: {
       created_by: actorId,
       created_at: now,
     };
-    memoryDb.creditNotes.set(id, row);
+    memoryDb.saveCreditNote(row);
     invoice.status = 'CREDITED';
+    memoryDb.saveInvoice(invoice);
     memoryDb.insertAuditLog({
       actor_id: actorId,
       actor_role: actorRole,
@@ -781,6 +794,7 @@ export async function createCreditNote(params: {
 export async function listCreditNotesByCustomer(customerId: number): Promise<import('./types').CreditNoteRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const out: import('./types').CreditNoteRow[] = [];
     for (const cn of memoryDb.creditNotes.values()) {
       if (cn.customer_id === customerId) out.push({ ...cn });
@@ -794,6 +808,7 @@ export async function listCreditNotesByCustomer(customerId: number): Promise<imp
 export async function listAllCreditNotes(limit = 100): Promise<import('./types').CreditNoteRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return Array.from(memoryDb.creditNotes.values()).sort((a, b) => b.id - a.id).slice(0, limit);
   }
   const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM credit_notes ORDER BY id DESC LIMIT ?', [limit]);
@@ -806,6 +821,7 @@ export async function listAllCreditNotes(limit = 100): Promise<import('./types')
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.insertAuditLog(entry);
   }
 
@@ -846,6 +862,7 @@ function isPriceTierRow(item: unknown): item is PriceTierRow {
 export async function getPriceTierById(id: number): Promise<PriceTierRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const tier = memoryDb.priceTiers.get(id);
     return tier ? { ...tier } : null;
   }
@@ -861,6 +878,7 @@ export async function getPriceTierById(id: number): Promise<PriceTierRow | null>
 export async function getPriceTierByCode(code: string): Promise<PriceTierRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     for (const tier of memoryDb.priceTiers.values()) {
       if (tier.code === code) return { ...tier };
     }
@@ -878,6 +896,7 @@ export async function getPriceTierByCode(code: string): Promise<PriceTierRow | n
 export async function getCustomerTier(customerId: number): Promise<PriceTierRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const assignment = memoryDb.customerTierAssignments.get(customerId);
     if (assignment) {
       const tier = memoryDb.priceTiers.get(assignment.tier_id);
@@ -920,7 +939,8 @@ export async function assignCustomerTier(
   const now = new Date().toISOString();
 
   if (!pool) {
-    memoryDb.customerTierAssignments.set(customerId, {
+    await memoryDb.ensureHydrated();
+    memoryDb.saveCustomerTierAssignment({
       customer_id: customerId,
       tier_id: tierId,
       assigned_by: assignedBy,
@@ -945,6 +965,7 @@ export async function getCustomPrice(customerId: number, sku: string): Promise<s
   const normSku = sku.trim().toUpperCase();
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.customProductPrices.get(customPriceKey(customerId, normSku))?.unit_price || null;
   }
   const [rows] = await pool.execute<RowDataPacket[]>(
@@ -959,6 +980,7 @@ export async function getCustomPrice(customerId: number, sku: string): Promise<s
 export async function listCustomPrices(customerId: number): Promise<import('./types').CustomerProductPriceRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const out: import('./types').CustomerProductPriceRow[] = [];
     for (const row of memoryDb.customProductPrices.values()) {
       if (row.customer_id === customerId) out.push({ ...row });
@@ -1001,6 +1023,7 @@ export async function setCustomPrice(params: {
   const now = new Date().toISOString();
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row: import('./types').CustomerProductPriceRow = {
       customer_id: customerId,
       sku: normSku,
@@ -1008,7 +1031,7 @@ export async function setCustomPrice(params: {
       updated_by: actorId,
       updated_at: now,
     };
-    memoryDb.customProductPrices.set(customPriceKey(customerId, normSku), row);
+    memoryDb.saveCustomerProductPrice(row);
     memoryDb.insertAuditLog({
       actor_id: actorId,
       actor_role: actorRole,
@@ -1050,7 +1073,8 @@ export async function deleteCustomPrice(params: {
   const normSku = sku.trim().toUpperCase();
   const pool = getMySqlPool();
   if (!pool) {
-    memoryDb.customProductPrices.delete(customPriceKey(customerId, normSku));
+    await memoryDb.ensureHydrated();
+    memoryDb.deleteCustomerProductPrice(customerId, normSku);
     memoryDb.insertAuditLog({
       actor_id: actorId,
       actor_role: actorRole,
@@ -1074,6 +1098,7 @@ export async function deleteCustomPrice(params: {
 export async function listPriceTiers(): Promise<PriceTierRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return Array.from(memoryDb.priceTiers.values());
   }
 
@@ -1104,6 +1129,7 @@ export async function createPriceTier(params: {
 
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     for (const t of memoryDb.priceTiers.values()) {
       if (t.code === code) {
         throw new Error(`TIER_CODE_EXISTS: Price tier code '${code}' already exists`);
@@ -1112,7 +1138,7 @@ export async function createPriceTier(params: {
     const ids = Array.from(memoryDb.priceTiers.keys());
     const id = ids.length > 0 ? Math.max(...ids) + 1 : 1;
     const row: PriceTierRow = { id, code, name, basis, active };
-    memoryDb.priceTiers.set(id, row);
+    memoryDb.savePriceTier(row);
     memoryDb.insertAuditLog({
       actor_id: actorId,
       actor_role: actorRole,
@@ -1165,6 +1191,7 @@ export async function updatePriceTier(params: {
 
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const tier = memoryDb.priceTiers.get(id);
     if (!tier) {
       throw new Error(`TIER_NOT_FOUND: Price tier #${id} does not exist`);
@@ -1180,6 +1207,7 @@ export async function updatePriceTier(params: {
     if (name !== undefined) tier.name = name;
     if (basis !== undefined) tier.basis = basis;
     if (active !== undefined) tier.active = active;
+    memoryDb.savePriceTier(tier);
     memoryDb.insertAuditLog({
       actor_id: actorId,
       actor_role: actorRole,
@@ -1256,6 +1284,7 @@ export async function eraseCustomerPii(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const cust = memoryDb.customers.get(customerId);
     if (!cust) {
       throw new Error(`CUSTOMER_NOT_FOUND: Customer #${customerId} does not exist`);
@@ -1266,6 +1295,7 @@ export async function eraseCustomerPii(params: {
     cust.phone = '0000000000';
     cust.address_json = '{}';
     cust.status = 'SUSPENDED';
+    memoryDb.saveCustomer(cust);
     for (const u of memoryDb.users.values()) {
       if (u.customer_id === customerId) {
         u.email = `erased-user-${u.id}@erased.local`;
@@ -1275,6 +1305,7 @@ export async function eraseCustomerPii(params: {
         u.failed_login_count = 0;
         u.locked_until = '2999-01-01T00:00:00.000Z';
         u.updated_at = new Date().toISOString();
+        memoryDb.saveUser(u);
       }
     }
     memoryDb.insertAuditLog({
@@ -1330,6 +1361,7 @@ export async function getAuditLogs(limit = 100): Promise<AuditLogRow[]> {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return [...memoryDb.auditLogs].reverse().slice(0, limit);
   }
 
@@ -1350,6 +1382,7 @@ export async function getAuditLogs(limit = 100): Promise<AuditLogRow[]> {
 export async function upsertDraftOrder(customerId: number, payloadJson: string): Promise<DraftOrderRow> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.upsertDraftOrder(customerId, payloadJson);
   }
 
@@ -1370,6 +1403,7 @@ export async function upsertDraftOrder(customerId: number, payloadJson: string):
 export async function getDraftOrder(customerId: number): Promise<DraftOrderRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row = memoryDb.draftOrders.get(customerId);
     return row ? { ...row } : null;
   }
@@ -1384,6 +1418,7 @@ export async function getDraftOrder(customerId: number): Promise<DraftOrderRow |
 export async function deleteDraftOrder(customerId: number): Promise<void> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     memoryDb.deleteDraftOrder(customerId);
     return;
   }
@@ -1394,6 +1429,7 @@ export async function deleteDraftOrder(customerId: number): Promise<void> {
 export async function getStockBalance(sku: string): Promise<StockBalanceRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row = memoryDb.stockBalances.get(sku);
     return row ? { ...row } : null;
   }
@@ -1408,12 +1444,14 @@ export async function getStockBalance(sku: string): Promise<StockBalanceRow | nu
 export async function setStockBalance(sku: string, qty: number, reserved = 0): Promise<void> {
   const pool = getMySqlPool();
   if (!pool) {
-    memoryDb.stockBalances.set(sku, {
+    await memoryDb.ensureHydrated();
+    const stock: StockBalanceRow = {
       sku,
       qty,
       reserved,
       updated_at: new Date().toISOString(),
-    });
+    };
+    memoryDb.saveStockBalance(stock);
     return;
   }
 
@@ -1428,6 +1466,7 @@ export async function setStockBalance(sku: string, qty: number, reserved = 0): P
 export async function getStockMovementsBySku(sku: string): Promise<StockMovementRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.stockMovements.filter((m) => m.sku === sku);
   }
 
@@ -1441,6 +1480,7 @@ export async function getStockMovementsBySku(sku: string): Promise<StockMovement
 export async function findSalesOrderById(orderId: number): Promise<SalesOrderRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const order = memoryDb.salesOrders.get(orderId);
     return order ? { ...order } : null;
   }
@@ -1455,6 +1495,7 @@ export async function findSalesOrderById(orderId: number): Promise<SalesOrderRow
 export async function findSalesOrderByNumber(orderNumber: string): Promise<SalesOrderRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     for (const order of memoryDb.salesOrders.values()) {
       if (order.order_number === orderNumber) {
         return { ...order };
@@ -1473,6 +1514,7 @@ export async function findSalesOrderByNumber(orderNumber: string): Promise<Sales
 export async function getSalesOrderLines(orderId: number): Promise<SalesOrderLineRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const lines = memoryDb.salesOrderLines.get(orderId);
     return lines ? [...lines] : [];
   }
@@ -1487,6 +1529,7 @@ export async function getSalesOrderLines(orderId: number): Promise<SalesOrderLin
 export async function listSalesOrdersByCustomer(customerId: number): Promise<SalesOrderRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const results: SalesOrderRow[] = [];
     for (const order of memoryDb.salesOrders.values()) {
       if (order.customer_id === customerId) {
@@ -1556,7 +1599,7 @@ export async function executeCheckoutTransaction(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
-
+    await memoryDb.ensureHydrated();
     const unlock = await memoryDb.acquireRowLocks(sortedLines.map((l) => l.sku));
     try {
 
@@ -1575,6 +1618,7 @@ export async function executeCheckoutTransaction(params: {
         const stock = memoryDb.stockBalances.get(line.sku)!;
         stock.qty -= line.qty;
         stock.updated_at = now;
+        memoryDb.saveStockBalance(stock);
       }
 
       const orderId = memoryDb.salesOrderSeq++;
@@ -1592,7 +1636,7 @@ export async function executeCheckoutTransaction(params: {
         created_at: now,
         updated_at: now,
       };
-      memoryDb.salesOrders.set(orderId, orderRow);
+      memoryDb.saveSalesOrder(orderRow);
 
       const lineRows: SalesOrderLineRow[] = [];
       let lineSeq = 1;
@@ -1610,10 +1654,10 @@ export async function executeCheckoutTransaction(params: {
         };
         lineRows.push(lineRow);
       }
-      memoryDb.salesOrderLines.set(orderId, lineRows);
+      memoryDb.saveSalesOrderLines(orderId, lineRows);
 
       for (const line of sortedLines) {
-        memoryDb.stockMovements.push({
+        const movement: StockMovementRow = {
           id: memoryDb.stockMovements.length + 1,
           sku: line.sku,
           delta: -line.qty,
@@ -1622,7 +1666,8 @@ export async function executeCheckoutTransaction(params: {
           ref_id: orderNumber,
           actor: createdBy,
           created_at: now,
-        });
+        };
+        memoryDb.saveStockMovement(movement);
       }
 
       memoryDb.insertAuditLog({
@@ -1752,6 +1797,7 @@ export async function listStaffOrders(options?: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const orders = Array.from(memoryDb.salesOrders.values());
     const filtered = statusFilter
       ? orders.filter((o) => o.status === statusFilter)
@@ -1847,6 +1893,7 @@ export async function listStaffOrders(options?: {
 export async function getInvoiceByOrderId(orderId: number): Promise<InvoiceRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     for (const inv of memoryDb.invoices.values()) {
       if (inv.order_id === orderId) {
         return { ...inv };
@@ -1866,6 +1913,7 @@ export async function getInvoiceByOrderId(orderId: number): Promise<InvoiceRow |
 export async function getInvoiceById(id: number): Promise<InvoiceRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const inv = memoryDb.invoices.get(id);
     return inv ? { ...inv } : null;
   }
@@ -1881,6 +1929,7 @@ export async function getInvoiceById(id: number): Promise<InvoiceRow | null> {
 export async function getCreditNoteById(id: number): Promise<import('./types').CreditNoteRow | null> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const cn = memoryDb.creditNotes.get(id);
     return cn ? { ...cn } : null;
   }
@@ -1896,6 +1945,7 @@ export async function getCreditNoteById(id: number): Promise<import('./types').C
 export async function listInvoicesByCustomerId(customerId: number): Promise<InvoiceRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const results: InvoiceRow[] = [];
     for (const inv of memoryDb.invoices.values()) {
       const order = memoryDb.salesOrders.get(inv.order_id);
@@ -1947,7 +1997,7 @@ export async function transitionOrderStatus(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
-
+    await memoryDb.ensureHydrated();
     const order = memoryDb.salesOrders.get(orderId);
     if (!order) {
       throw new Error(`ORDER_NOT_FOUND: Sales order #${orderId} does not exist`);
@@ -1965,6 +2015,7 @@ export async function transitionOrderStatus(params: {
       targetStatus = 'APPROVED';
       order.status = targetStatus;
       order.updated_at = new Date().toISOString();
+      memoryDb.saveSalesOrder(order);
 
       memoryDb.insertAuditLog({
         actor_id: actorId,
@@ -2012,11 +2063,12 @@ export async function transitionOrderStatus(params: {
         total: order.total,
         status: 'ISSUED',
       };
-      memoryDb.invoices.set(invoiceId, invoiceRow);
+      memoryDb.saveInvoice(invoiceRow);
 
       targetStatus = 'INVOICED';
       order.status = targetStatus;
       order.updated_at = now;
+      memoryDb.saveSalesOrder(order);
 
       memoryDb.insertAuditLog({
         actor_id: actorId,
@@ -2057,6 +2109,7 @@ export async function transitionOrderStatus(params: {
       targetStatus = 'FULFILLED';
       order.status = targetStatus;
       order.updated_at = new Date().toISOString();
+      memoryDb.saveSalesOrder(order);
 
       memoryDb.insertAuditLog({
         actor_id: actorId,
@@ -2089,8 +2142,9 @@ export async function transitionOrderStatus(params: {
         if (stock) {
           stock.qty += line.qty;
           stock.updated_at = now;
+          memoryDb.saveStockBalance(stock);
         }
-        memoryDb.stockMovements.push({
+        const movement: StockMovementRow = {
           id: memoryDb.stockMovements.length + 1,
           sku: line.sku,
           delta: line.qty,
@@ -2099,13 +2153,15 @@ export async function transitionOrderStatus(params: {
           ref_id: order.order_number,
           actor: actorId,
           created_at: now,
-        });
+        };
+        memoryDb.saveStockMovement(movement);
       }
 
       targetStatus = 'CANCELLED';
       order.status = targetStatus;
       order.cancel_reason = cancelReason.trim();
       order.updated_at = now;
+      memoryDb.saveSalesOrder(order);
 
       memoryDb.insertAuditLog({
         actor_id: actorId,
@@ -2330,6 +2386,7 @@ export async function listAllCustomers(filter?: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const list: CustomerWithTierInfo[] = [];
     for (const cust of memoryDb.customers.values()) {
       if (filter?.status && cust.status !== filter.status) {
@@ -2456,6 +2513,7 @@ export async function updateCustomerStatusAndTier(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const cust = memoryDb.customers.get(customerId);
     if (!cust) {
       throw new Error(`CUSTOMER_NOT_FOUND: Customer #${customerId} does not exist`);
@@ -2464,6 +2522,7 @@ export async function updateCustomerStatusAndTier(params: {
     const prevStatus = cust.status;
     if (status && status !== prevStatus) {
       cust.status = status;
+      memoryDb.saveCustomer(cust);
 
       for (const u of memoryDb.users.values()) {
         if (u.customer_id === customerId) {
@@ -2473,6 +2532,7 @@ export async function updateCustomerStatusAndTier(params: {
             u.failed_login_count = 0;
           }
           u.updated_at = new Date().toISOString();
+          memoryDb.saveUser(u);
         }
       }
 
@@ -2498,7 +2558,7 @@ export async function updateCustomerStatusAndTier(params: {
       const prevAssign = memoryDb.customerTierAssignments.get(customerId);
       const prevTierId = prevAssign?.tier_id;
 
-      memoryDb.customerTierAssignments.set(customerId, {
+      memoryDb.saveCustomerTierAssignment({
         customer_id: customerId,
         tier_id: tierId,
         assigned_by: actorId,
@@ -2695,6 +2755,7 @@ export async function updateCustomerBusinessProfile(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const cust = memoryDb.customers.get(customerId);
     if (!cust) {
       throw new Error(`CUSTOMER_NOT_FOUND: Customer #${customerId} does not exist`);
@@ -2706,6 +2767,7 @@ export async function updateCustomerBusinessProfile(params: {
     cust.credit_limit = creditLimit;
     cust.payment_terms = paymentTerms;
     cust.logo_url = logoUrl;
+    memoryDb.saveCustomer(cust);
     const afterHash = fingerprint(cust);
 
     memoryDb.insertAuditLog({
@@ -2825,6 +2887,7 @@ export async function updateCustomerBusinessProfile(params: {
 export async function listAllStockBalances(): Promise<StockBalanceRow[]> {
   const pool = getMySqlPool();
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return Array.from(memoryDb.stockBalances.values()).sort((a, b) => a.sku.localeCompare(b.sku));
   }
 
@@ -2856,6 +2919,7 @@ export async function adjustStockBalance(params: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const stock = memoryDb.stockBalances.get(sku);
     const currentQty = stock ? stock.qty : 0;
     const reserved = stock ? stock.reserved : 0;
@@ -2874,7 +2938,7 @@ export async function adjustStockBalance(params: {
       reserved,
       updated_at: now,
     };
-    memoryDb.stockBalances.set(sku, updatedStock);
+    memoryDb.saveStockBalance(updatedStock);
 
     const movementId = memoryDb.stockMovements.length + 1;
     const movement: StockMovementRow = {
@@ -2887,7 +2951,7 @@ export async function adjustStockBalance(params: {
       actor: actorId,
       created_at: now,
     };
-    memoryDb.stockMovements.push(movement);
+    memoryDb.saveStockMovement(movement);
 
     memoryDb.insertAuditLog({
       actor_id: actorId,
@@ -2982,6 +3046,7 @@ export async function listStockMovements(params?: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     let list = [...memoryDb.stockMovements];
     if (sku) {
       list = list.filter((m) => m.sku === sku);
@@ -3019,6 +3084,7 @@ export async function getTaxReportSummary(params?: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     let invoices = Array.from(memoryDb.invoices.values());
     if (params?.fromDate) {
       const from = new Date(params.fromDate).getTime();
@@ -3134,6 +3200,7 @@ export async function listAuditLogsFiltered(params?: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     let list = [...memoryDb.auditLogs];
     if (params?.action) {
       list = list.filter((a) => a.action === params.action);
@@ -3185,6 +3252,7 @@ export async function createRequisitionTemplate(data: {
   const now = new Date().toISOString();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const id = memoryDb.requisitionTemplateSeq++;
     const row: RequisitionTemplateRow = {
       id,
@@ -3195,7 +3263,7 @@ export async function createRequisitionTemplate(data: {
       created_at: now,
       updated_at: now,
     };
-    memoryDb.requisitionTemplates.set(id, row);
+    memoryDb.saveRequisitionTemplate(row);
     return { ...row };
   }
 
@@ -3219,6 +3287,7 @@ export async function getRequisitionTemplateById(
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const tpl = memoryDb.requisitionTemplates.get(id);
     if (!tpl) return null;
     if (customerId !== undefined && tpl.customer_id !== customerId) return null;
@@ -3244,6 +3313,7 @@ export async function listRequisitionTemplatesByCustomer(
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const list: RequisitionTemplateRow[] = [];
     for (const tpl of memoryDb.requisitionTemplates.values()) {
       if (tpl.customer_id === customerId) {
@@ -3273,6 +3343,7 @@ export async function updateRequisitionTemplate(
   const now = new Date().toISOString();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const tpl = memoryDb.requisitionTemplates.get(id);
     if (!tpl || tpl.customer_id !== customerId) {
       return null;
@@ -3281,6 +3352,7 @@ export async function updateRequisitionTemplate(
     if (data.description !== undefined) tpl.description = data.description;
     if (data.items_json !== undefined) tpl.items_json = data.items_json;
     tpl.updated_at = now;
+    memoryDb.saveRequisitionTemplate(tpl);
     return { ...tpl };
   }
 
@@ -3319,11 +3391,12 @@ export async function deleteRequisitionTemplate(
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const tpl = memoryDb.requisitionTemplates.get(id);
     if (!tpl || tpl.customer_id !== customerId) {
       return false;
     }
-    memoryDb.requisitionTemplates.delete(id);
+    memoryDb.deleteRequisitionTemplate(id);
     return true;
   }
 
@@ -3362,6 +3435,7 @@ export async function createPaymentProof(data: {
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     const row: PaymentProofRow = {
       id: memoryDb.paymentProofSeq++,
       order_id: data.order_id,
@@ -3373,7 +3447,7 @@ export async function createPaymentProof(data: {
       uploaded_by: data.uploaded_by,
       created_at: new Date().toISOString(),
     };
-    memoryDb.paymentProofs.push(row);
+    memoryDb.savePaymentProof(row);
     return { ...row };
   }
 
@@ -3397,6 +3471,7 @@ export async function listPaymentProofsByOrderId(orderId: number): Promise<Payme
   const pool = getMySqlPool();
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     return memoryDb.paymentProofs
       .filter((p) => p.order_id === orderId)
       .map((p) => ({ ...p }));
@@ -3417,6 +3492,7 @@ export async function getPaymentProofFile(proofId: number): Promise<{ proof: Pay
   let proof: PaymentProofRow | null = null;
 
   if (!pool) {
+    await memoryDb.ensureHydrated();
     proof = memoryDb.paymentProofs.find((p) => p.id === proofId) ?? null;
     if (proof) proof = { ...proof };
   } else {

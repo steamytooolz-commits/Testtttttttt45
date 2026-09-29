@@ -32,8 +32,8 @@ class MongoBackedMemoryStore {
           return doc.value;
         }
       }
-    } catch {
-      // safe fallback
+    } catch (err) {
+      logger.error('Failed to get key from MongoDB kv_store', { key, error: err instanceof Error ? err.message : String(err) });
     }
 
     return null;
@@ -69,8 +69,8 @@ class MongoBackedMemoryStore {
           { upsert: true }
         );
       }
-    } catch {
-      // safe fallback
+    } catch (err) {
+      logger.error('Failed to set key in MongoDB kv_store', { key, error: err instanceof Error ? err.message : String(err) });
     }
 
     return 'OK';
@@ -97,8 +97,8 @@ class MongoBackedMemoryStore {
       if (db && keys.length > 0) {
         await db.collection('kv_store').deleteMany({ key: { $in: keys } });
       }
-    } catch {
-      // safe fallback
+    } catch (err) {
+      logger.error('Failed to delete keys from MongoDB kv_store', { keys, error: err instanceof Error ? err.message : String(err) });
     }
     return count;
   }
@@ -109,7 +109,19 @@ class MongoBackedMemoryStore {
     if (!entry) {
       return 0;
     }
-    entry.expiresAt = Date.now() + seconds * 1000;
+    const expiresAt = Date.now() + seconds * 1000;
+    entry.expiresAt = expiresAt;
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('kv_store').updateOne(
+          { key },
+          { $set: { expiresAt } }
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to set expire in MongoDB kv_store', { key, error: err instanceof Error ? err.message : String(err) });
+    }
     return 1;
   }
 
@@ -137,6 +149,18 @@ class MongoBackedMemoryStore {
     } else {
       this.store.set(key, { value: '1' });
     }
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('kv_store').updateOne(
+          { key },
+          { $set: { key, value: String(nextVal) } },
+          { upsert: true }
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to incr key in MongoDB kv_store', { key, error: err instanceof Error ? err.message : String(err) });
+    }
     return nextVal;
   }
 
@@ -160,9 +184,10 @@ class MongoBackedMemoryStore {
       const db = await getMongoDb();
       if (db) {
         await db.collection('kv_store').deleteMany({});
+        await db.collection('kv_sets').deleteMany({});
       }
-    } catch {
-      // safe fallback
+    } catch (err) {
+      logger.error('Failed to flush MongoDB kv_store', { error: err instanceof Error ? err.message : String(err) });
     }
     return 'OK';
   }
@@ -184,19 +209,60 @@ class MongoBackedMemoryStore {
         added += 1;
       }
     }
+    try {
+      const db = await getMongoDb();
+      if (db && members.length > 0) {
+        await db.collection('kv_sets').updateOne(
+          { key },
+          { $addToSet: { members: { $each: members } } },
+          { upsert: true }
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to sadd to MongoDB kv_sets', { key, error: err instanceof Error ? err.message : String(err) });
+    }
     return added;
   }
 
   async smembers(key: string): Promise<string[]> {
-    return Array.from(this.sets.get(key) || []);
+    const memorySet = this.sets.get(key);
+    if (memorySet && memorySet.size > 0) {
+      return Array.from(memorySet);
+    }
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const doc = await db.collection<{ key: string; members: string[] }>('kv_sets').findOne({ key });
+        if (doc && Array.isArray(doc.members)) {
+          this.sets.set(key, new Set(doc.members));
+          return doc.members;
+        }
+      }
+    } catch (err) {
+      logger.error('Failed to smembers from MongoDB kv_sets', { key, error: err instanceof Error ? err.message : String(err) });
+    }
+    return Array.from(memorySet || []);
   }
 
   async srem(key: string, ...members: string[]): Promise<number> {
     const set = this.sets.get(key);
-    if (!set) return 0;
     let removed = 0;
-    for (const m of members) {
-      if (set.delete(m)) removed += 1;
+    if (set) {
+      for (const m of members) {
+        if (set.delete(m)) removed += 1;
+      }
+    }
+    try {
+      const db = await getMongoDb();
+      if (db && members.length > 0) {
+        await db.collection<{ key: string; members: string[] }>('kv_sets').updateOne(
+          { key },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { $pull: { members: { $in: members } } as any }
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to srem from MongoDB kv_sets', { key, error: err instanceof Error ? err.message : String(err) });
     }
     return removed;
   }

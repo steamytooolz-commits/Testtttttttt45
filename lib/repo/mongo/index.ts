@@ -1,5 +1,6 @@
 import 'server-only';
 import { getMongoDb } from './client';
+import { logger } from '@/lib/logger';
 
 export interface ProductDocument {
   _id: string;
@@ -312,6 +313,32 @@ const memoryProducts: ProductDocument[] = [
   },
 ];
 
+let hasHydratedMongoProducts = false;
+
+export async function ensureMongoProductsHydrated(): Promise<void> {
+  if (hasHydratedMongoProducts) return;
+  hasHydratedMongoProducts = true;
+  try {
+    const db = await getMongoDb();
+    if (!db) return;
+
+    const productCount = await db.collection('products').countDocuments();
+    if (productCount === 0) {
+      logger.info('Hydrating MongoDB with baseline products and categories...');
+      const catCount = await db.collection('categories').countDocuments();
+      if (catCount === 0) {
+        const cleanCats = memoryCategories.map((c) => ({ ...c })) as Record<string, unknown>[];
+        await db.collection<Record<string, unknown>>('categories').insertMany(cleanCats);
+      }
+      const cleanProds = memoryProducts.map((p) => ({ ...p })) as Record<string, unknown>[];
+      await db.collection<Record<string, unknown>>('products').insertMany(cleanProds);
+      logger.info('MongoDB products and categories hydrated successfully.');
+    }
+  } catch (err) {
+    logger.error('Failed to hydrate MongoDB products/categories', { error: String(err) });
+  }
+}
+
 export async function findProducts(filter: {
   categoryRef?: string;
   paperWeight?: string;
@@ -320,6 +347,7 @@ export async function findProducts(filter: {
   activeOnly?: boolean;
   limit?: number;
 } = {}): Promise<ProductDocument[]> {
+  await ensureMongoProductsHydrated();
   const db = await getMongoDb();
   if (!db) {
     const filtered = memoryProducts.filter((p) => {
@@ -359,6 +387,7 @@ export async function findProducts(filter: {
 }
 
 export async function findProductBySku(sku: string): Promise<ProductDocument | null> {
+  await ensureMongoProductsHydrated();
   const db = await getMongoDb();
   if (!db) {
     const found = memoryProducts.find((p) => p._id === sku);
@@ -368,6 +397,7 @@ export async function findProductBySku(sku: string): Promise<ProductDocument | n
 }
 
 export async function findCategories(): Promise<CategoryDocument[]> {
+  await ensureMongoProductsHydrated();
   const db = await getMongoDb();
   if (!db) {
     return memoryCategories;
@@ -379,6 +409,7 @@ export const listCategories = findCategories;
 
 export async function ensureCategory(slug: string, name?: string): Promise<CategoryDocument> {
   const normalized = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  await ensureMongoProductsHydrated();
   const db = await getMongoDb();
   if (!db) {
     const existing = memoryCategories.find((c) => c.slug === normalized || c._id === `cat-${normalized}`);
@@ -395,7 +426,7 @@ export async function ensureCategory(slug: string, name?: string): Promise<Categ
   const id = `cat-${normalized}`;
   await db.collection<CategoryDocument>('categories').updateOne(
     { _id: id },
-    { $setOnInsert: { _id: id, slug: normalized, name: name?.trim() || normalized, description: `Auto-created category ${normalized}` } },
+    { $set: { slug: normalized, name: name?.trim() || normalized, description: `Auto-created category ${normalized}` }, $setOnInsert: { _id: id } },
     { upsert: true }
   );
   const doc = await db.collection<CategoryDocument>('categories').findOne({ _id: id });
@@ -404,6 +435,7 @@ export async function ensureCategory(slug: string, name?: string): Promise<Categ
 }
 
 export async function upsertProduct(doc: ProductDocument): Promise<ProductDocument> {
+  await ensureMongoProductsHydrated();
   const db = await getMongoDb();
   if (!db) {
     const idx = memoryProducts.findIndex((p) => p._id === doc._id);
@@ -415,7 +447,14 @@ export async function upsertProduct(doc: ProductDocument): Promise<ProductDocume
     memoryProducts.push(created);
     return created;
   }
-  await db.collection<ProductDocument>('products').updateOne({ _id: doc._id }, { $set: doc }, { upsert: true });
+  const rest = { ...doc };
+  delete (rest as { _id?: string })._id;
+  const toSet = { ...rest, updatedAt: new Date().toISOString() };
+  await db.collection<ProductDocument>('products').updateOne(
+    { _id: doc._id },
+    { $set: toSet, $setOnInsert: { _id: doc._id } },
+    { upsert: true }
+  );
   const saved = await db.collection<ProductDocument>('products').findOne({ _id: doc._id });
   if (!saved) throw new Error('PRODUCT_UPSERT_FAILED');
   return saved;

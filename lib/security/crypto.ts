@@ -3,13 +3,11 @@ import { hash, verify } from '@node-rs/argon2';
 import crypto from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
+const DEFAULT_CRYPTO_SECRET = 'stationery_depot_default_secure_secret_key_32_bytes!';
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('SESSION_SECRET is not configured');
-  }
-  return crypto.createHash('sha256').update(secret || 'stationery_depot_default_secure_secret_key_32_bytes!').digest();
+  const secret = process.env.SESSION_SECRET || DEFAULT_CRYPTO_SECRET;
+  return crypto.createHash('sha256').update(secret).digest();
 }
 
  export async function hashPassword(password: string): Promise<string> {
